@@ -1,0 +1,161 @@
+FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu16.04
+LABEL maintainer Telchar
+
+ENV LANG C.UTF-8
+
+RUN apt-get update
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        build-essential \
+        apt-utils \
+        wget \
+        git \
+        curl \
+	g++ \
+	gfortran \
+        vim \
+	libcurl4-openssl-dev \
+        libssl-dev \
+        libssh2-1-dev \
+	python2.7 \
+        python2.7-dev \
+        && \
+    apt-get update \
+    && rm -rf /var/lib/apt/lists/* 
+
+RUN cd /tmp \
+    && apt-get update \
+    && apt-get install -y curl apt-utils wget unzip\
+    && rm -rf /var/lib/apt/lists/*
+
+
+
+RUN apt-get update && apt-get install -y software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends \ 
+        python3.6 \
+        python3.6-dev \
+        python3-distutils-extra \
+        && \
+        apt-get update \
+        && \
+    wget -O ~/get-pip.py \
+        https://bootstrap.pypa.io/get-pip.py && \
+    python3.6 ~/get-pip.py && \
+    ln -s /usr/bin/python3.6 /usr/local/bin/python3 && \
+    ln -s /usr/bin/python3.6 /usr/local/bin/python \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m pip --no-cache-dir install --upgrade \
+        setuptools \
+        && rm -rf /var/lib/apt/lists/*
+
+RUN python -m pip --no-cache-dir install --upgrade \
+        numpy \
+        scipy \
+        h5py \
+        cloudpickle \
+        scikit-learn \
+        pandas \
+        matplotlib \
+        Cython \
+        Pillow \
+	jupyter \
+        tf-nightly-gpu-2.0-preview \
+        keras \
+        && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/Kitware/CMake ~/cmake && \
+    cd ~/cmake && \
+    ./bootstrap && \
+    make -j"$(nproc)" install \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN wget -O ~/boost.tar.gz https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.gz && \
+    tar -zxf ~/boost.tar.gz -C ~ && \
+    cd ~/boost_* && \
+    ./bootstrap.sh --with-python=python3.6 && \
+    ./b2 install -j"$(nproc)" --prefix=/usr/local \
+    && rm -rf /var/lib/apt/lists/* 
+
+RUN apt-get update && apt-get install -y --no-install-recommends \ 
+        libatlas-base-dev \
+        libgflags-dev \
+        libgoogle-glog-dev \
+        libhdf5-serial-dev \
+        libleveldb-dev \
+        liblmdb-dev \
+        libprotobuf-dev \
+        libsnappy-dev \
+        protobuf-compiler \
+        && \
+        apt-get clean && \
+	apt-get autoremove \
+        && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --branch 4.0.1 https://github.com/opencv/opencv ~/opencv && \
+    mkdir -p ~/opencv/build && cd ~/opencv/build && \
+    cmake -D CMAKE_BUILD_TYPE=RELEASE \
+          -D CMAKE_INSTALL_PREFIX=/usr/local \
+          -D WITH_IPP=OFF \
+          -D WITH_CUDA=OFF \
+          -D WITH_OPENCL=OFF \
+          -D BUILD_TESTS=OFF \
+          -D BUILD_PERF_TESTS=OFF \
+          .. && \
+    make -j"$(nproc)" install && \
+    ln -s /usr/local/include/opencv4/opencv2 /usr/local/include/opencv2 \
+        && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/BVLC/caffe ~/caffe && \
+    sed -i 's/CV_LOAD_IMAGE_COLOR/cv::IMREAD_COLOR/g' ~/caffe/src/caffe/layers/window_data_layer.cpp && \
+    sed -i 's/CV_LOAD_IMAGE_COLOR/cv::IMREAD_COLOR/g' ~/caffe/src/caffe/util/io.cpp && \
+    sed -i 's/CV_LOAD_IMAGE_GRAYSCALE/cv::IMREAD_GRAYSCALE/g' ~/caffe/src/caffe/util/io.cpp && \
+    cp ~/caffe/Makefile.config.example ~/caffe/Makefile.config && \
+    sed -i 's/# USE_CUDNN/USE_CUDNN/g' ~/caffe/Makefile.config && \
+    sed -i 's/# PYTHON_LIBRARIES/PYTHON_LIBRARIES/g' ~/caffe/Makefile.config && \
+    sed -i 's/# WITH_PYTHON_LAYER/WITH_PYTHON_LAYER/g' ~/caffe/Makefile.config && \
+    sed -i 's/# OPENCV_VERSION/OPENCV_VERSION/g' ~/caffe/Makefile.config && \
+    sed -i 's/# USE_NCCL/USE_NCCL/g' ~/caffe/Makefile.config && \
+    sed -i 's/-gencode arch=compute_20,code=sm_20//g' ~/caffe/Makefile.config && \
+    sed -i 's/-gencode arch=compute_20,code=sm_21//g' ~/caffe/Makefile.config && \
+    sed -i 's/2\.7/3\.6/g' ~/caffe/Makefile.config && \
+    sed -i 's/3\.5/3\.6/g' ~/caffe/Makefile.config && \
+    sed -i 's/boost_python3/boost_python36/g' ~/caffe/Makefile.config && \
+    sed -i 's/\/usr\/lib\/python/\/usr\/local\/lib\/python/g' ~/caffe/Makefile.config && \
+    sed -i 's/\/usr\/local\/include/\/usr\/local\/include \/usr\/include\/hdf5\/serial/g' ~/caffe/Makefile.config && \
+    sed -i 's/hdf5/hdf5_serial/g' ~/caffe/Makefile && \
+    sed -i 's/# Debugging/COMMON_FLAGS += -std=c++11\n# Debugging/g' ~/caffe/Makefile && \
+    cd ~/caffe && \
+    make -j"$(nproc)" -Wno-deprecated-gpu-targets distribute && \
+    sed -i 's/,<2//g' ~/caffe/python/requirements.txt \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m pip --no-cache-dir install --upgrade \
+        -r ~/caffe/python/requirements.txt \
+        && rm -rf /var/lib/apt/lists/* 
+
+RUN cd ~/caffe/distribute/bin && \
+    for file in *.bin; do mv "$file" "${file%%.bin}"; done && \
+    cd ~/caffe/distribute && \
+    cp -r bin include lib proto /usr/local/ && \
+    cp -r python/caffe /usr/local/lib/python3.6/dist-packages/ && \
+        apt-get clean && \
+	apt-get autoremove \
+        && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/pjreddie/darknet.git ~/darknet && \
+    cd ~/darknet && \
+    sed -i 's/GPU=0/GPU=1/g' ~/darknet/Makefile && \
+    sed -i 's/CUDNN=0/CUDNN=1/g' ~/darknet/Makefile && \
+    make -j"$(nproc)" && \
+    cp ~/darknet/include/* /usr/local/include && \
+    cp ~/darknet/*.a /usr/local/lib && \
+    cp ~/darknet/*.so /usr/local/lib && \
+    cp ~/darknet/darknet /usr/local/bin \
+    && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 6006 8888
