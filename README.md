@@ -1,0 +1,4 @@
+# UsefullScripts
+csvDirFileCopy - copy files (which names are located in csv file) to other directory 
+FileCounter - count files in directory (few examples)
+DockerFull - create image of docker for deep learning (darknet, caffe, tensorflow, keras, openCV)
