@@ -1,0 +1,19 @@
+import os
+import shutil
+import csv
+
+
+# Open a file
+path = r"G:\X-ray\data\images"
+destination = r"G:\X-ray\data\TrainData"
+dirs = os.listdir(path)
+
+with open("NoFinding.csv", 'r') as csvfile:
+    reader = csv.reader(csvfile)
+    images = list(reader)
+    k = 0
+    for row in images:
+        if k % 10 == 0:
+            n = os.path.join(path, row[0])
+            shutil.copy(n, destination)
+        k += 1
