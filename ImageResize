@@ -1,0 +1,13 @@
+from PIL import Image
+import os
+
+path = r"path\"
+
+dirs = os.listdir(path)
+
+for item in dirs:
+    if os.path.isfile(path + item):
+        im = Image.open(path + item)
+        size = (224, 224)
+        imResize = im.resize(size)   #RESIZE PNG IMAGE
+        imResize.save(path + item)
